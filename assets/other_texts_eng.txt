@@ -1,0 +1,165 @@
+/GOLDKEY
+You have won a golden key.
+
+/APPOINT
+You have earned AP points.
+
+/CASHWARNING
+You have earned points.
+Do you want to go to the shop to purchase?
+
+/RETRY
+Do you want to restart?
+
+/EXIT
+Do you want to go back to the main menu?
+
+/NET_WARNING
+Network is unstable.
+Try again.
+
+/THANK_YOU
+Thanks for purchasing.
+
+/SELECT_EPISODE
+Select an episode.
+
+/SELECT_STAGE
+Select a stage.
+
+/LOCK_ENDING
+It is locked. First you must complete all the rooms in order to open this one.
+
+/LOCK_INTRO
+It is locked. Go back to the first room
+
+/LOCK_STAGE
+Break out of the previous stage.
+
+/LOCK_EPISODE
+Select [Golden Key] or [Destructive Power] to open.
+
+/NO_GOLDKEY
+You don’t have enough [Golden Key].
+
+/NO_APPOINT
+You don’t have enough AP.
+
+/UNLOCK_EPISODE
+Do you want to open the episode?
+
+/TIP_1
+Welcome.
+I feel pleased to have you for this journey: RoomBreak.
+
+/TIP_2
+Every clue is in the room, which will help your breakout.
+Don’t miss every detail, even little ones.
+
+/TIP_3
+Never give up! Try until you finally succeed!
+This great challenge can lead you to achieve freedom.
+
+/TIP_4
+Think out of the box!!
+Sometimes, you are able to move through certain pathways other than doors.
+
+/TIP_5
+Bear in mind that [Special ability] can help you escape easily at that moment,
+but the real excitement of the game can be lost from too much uses of it.
+
+/TIP_6
+Share your ideas with friends, family members and colleagues
+Extreme situations will provide you and your friends with a strong bond.
+
+/TIP_7
+[Update will be constantly provided]
+Get yourself ready for new challenges all the time.
+
+/TIP_8
+Extraordinary ability can be purchased at the shop.
+
+/TIP_9
+Complete all the tasks assigned to you.
+That will bring you another enjoyment, playing the game.
+
+/TIP_10
+We love out player, looking at this screen at this very moment: You :D
+
+/NO_TUTO
+no tutorial
+
+/ABILITY_EYES
+Second-sight (two)
+Find all items.
+
+/ABILITY_FOOTS
+Great steps(one)
+Clear the stage without operating.
+
+/ABILITY_HANDS
+Hands of God(two)
+Clear puzzles or mini games, without actually doing it.
+
+/ABILITY_INSIGHT
+Insight (two)
+Know characteristics of items, including where to use.
+
+/ABILITY_BLESSING
+Blessing of God
+Six Second-sight and six Insight to purchase.
+
+/ABILITY_GIFT
+Gift of God
+Six Hands of God and three Great steps to purchase.
+
+/FAILED_PURCHASE
+You failed to purchase.
+Please retry.
+
+/DEMAND_RATING
+Please, evaluate the game.
+It will be big help for developer.
+If you touch OK key, it will move to the evaluation page.
+( Hands of God(one) free payment) 
+
+/FACEBOOK
+Can you really escape?
+
+/WILL_UPDATE
+Updates are sheduled soon.
+
+/IS_USE
+Will you use this item?
+
+/CLEAR_EPISODE
+Finish the previous episode first.
+
+/CONVERT_PAID
+You are not able to proceed further in this version.
+Will you move to purchase page of full version?
+
+/MOVE_PAID
+Will you move to purchase page of full version?
+
+/NO_HAVE
+Not enough items.
+
+/NO_USE
+You can’t use it.
+
+/NO_PROGRESS
+You are not able to proceed further in this version.
+
+/LITE_VER
+In this version, you can play episode 0 and episode 2.
+
+/PUR_1
+Will you pay for it? Then we will give you 
+one ‘Hands of God’ and one ‘Great Steps’.
+
+/PUR_2
+More valuable challenge is waiting for you.
+Will you keep playing this?
+
+/

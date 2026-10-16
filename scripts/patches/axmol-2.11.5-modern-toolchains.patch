@@ -1,0 +1,84 @@
+diff --git a/3rdparty/fmt/include/fmt/format.h b/3rdparty/fmt/include/fmt/format.h
+index 50e5714..9dc5aa0 100644
+--- a/3rdparty/fmt/include/fmt/format.h
++++ b/3rdparty/fmt/include/fmt/format.h
+@@ -44,6 +44,7 @@
+ #  include <cmath>    // std::signbit
+ #  include <cstddef>  // std::byte
+ #  include <cstdint>  // uint32_t
++#  include <cstdlib>  // malloc, free
+ #  include <cstring>  // std::memcpy
+ #  include <limits>   // std::numeric_limits
+ #  include <new>      // std::bad_alloc
+diff --git a/3rdparty/ntcvt/ntcvt.hpp b/3rdparty/ntcvt/ntcvt.hpp
+index 303d38b..2865e71 100644
+--- a/3rdparty/ntcvt/ntcvt.hpp
++++ b/3rdparty/ntcvt/ntcvt.hpp
+@@ -20,54 +20,6 @@ namespace ntcvt
+ 
+ namespace detail
+ {
+-// different with resize, not all of fill new memory with '\0'
+-template <class _Elem, class _Traits = std::char_traits<_Elem>,
+-          class _Alloc = std::allocator<_Elem>>
+-class intrusive_string : public std::basic_string<_Elem, _Traits, _Alloc>
+-{
+-public:
+-#if _MSC_VER >= 1920 // VS2019+
+-  using _Alty        = std::_Rebind_alloc_t<_Alloc, _Elem>;
+-  using _Alty_traits = std::allocator_traits<_Alty>;
+-
+-  using _Scary_val = std::_String_val<
+-      std::conditional_t<std::_Is_simple_alloc_v<_Alty>, std::_Simple_types<_Elem>,
+-                         std::_String_iter_types<
+-                             _Elem, typename _Alty_traits::size_type,
+-                             typename _Alty_traits::difference_type, typename _Alty_traits::pointer,
+-#   if _MSC_VER < 1938
+-                             typename _Alty_traits::const_pointer, _Elem&, const _Elem&>>>;
+-#   else //  VS2022 17.8.0+
+-                             typename _Alty_traits::const_pointer>>>;
+-#   endif
+-
+-#endif
+-  // See also afxmfc CString::GetBufferSetLength
+-  // Why do this hack?
+-  // stupid: because the default c++ standard resize always fill with '\0'
+-  // std::string: use memset (usually implemented with SIMD)
+-  // std::wstring: for loop (slow performance)
+-  // only works on msvc currently
+-#if !defined(_MSVC) && (!defined(_HAS_CXX23) || !_HAS_CXX23)
+-  template <class _Operation> void resize_and_overwrite(const size_t _New_size, _Operation&& _Op)
+-  {
+-    this->reserve(_New_size);
+-
+-#  if _MSC_VER >= 1920 // VS2019+
+-    std::_Compressed_pair<_Alty, _Scary_val>* _Myval =
+-        (std::_Compressed_pair<_Alty, _Scary_val>*)this;
+-    auto& _Myval2                 = _Myval->_Myval2;
+-    auto result_size              = _Op(_Myval2._Myptr(), _New_size);
+-    _Myval2._Mysize               = result_size;
+-    _Myval2._Myptr()[result_size] = '\0';
+-#  else
+-    auto result_size = _Op(this->_Myptr(), _New_size);
+-    this->_Eos(result_size);
+-#  endif
+-  }
+-#endif
+-};
+-
+ template <typename _Cont> struct buffer_traits
+ {
+   typedef _Cont container_type;
+@@ -75,9 +27,9 @@ template <typename _Cont> struct buffer_traits
+   template <typename _Operation>
+   static inline void resize_and_overwrite(container_type& str, size_t size, _Operation&& op)
+   {
+-    typedef typename container_type::value_type _Elem;
+-    intrusive_string<_Elem>& helper = (intrusive_string<_Elem>&)str;
+-    helper.resize_and_overwrite(size, std::move(op));
++    str.resize(size);
++    const auto written = op(str.data(), size);
++    str.resize(written);
+   }
+ };
+ 

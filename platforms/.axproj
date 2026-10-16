@@ -1,0 +1,6 @@
+package_name=local.roombreak.rebuilt
+project_type=cpp
+engine_version=2.11.5
+
+ndk=r30
+min_sdk=21

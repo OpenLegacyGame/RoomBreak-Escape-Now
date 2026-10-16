@@ -1,0 +1,94 @@
+name: Publish verified release
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Prepare a draft, or verify and publish uploaded packages
+        required: true
+        type: choice
+        options: [prepare, publish]
+      tag:
+        description: Release tag
+        required: true
+        default: v1.0.0
+      commit:
+        description: Full commit SHA used to build the packages
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_COMMIT: ${{ inputs.commit }}
+      PHASE: ${{ inputs.phase }}
+    steps:
+      - name: Validate inputs
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          gh api "repos/$GH_REPO/commits/$SOURCE_COMMIT" --jq .sha | grep -Fx "$SOURCE_COMMIT"
+      - name: Prepare bot-owned draft
+        if: inputs.phase == 'prepare'
+        run: |
+          cat > notes.md <<'NOTES'
+          Native builds for Windows amd64, iOS arm64, Android arm64-v8a, and macOS Apple Silicon.
+
+          Includes fixes for curtain number clues, item-name control characters, the Sphinx 1324 clue, and taps with small finger movements.
+
+          - Windows: EXE installer with the required VC++ runtime.
+          - iOS: unsigned IPA; sign it before installation.
+          - Android: APK signed with the Android Debug certificate.
+          - macOS: PKG containing an ad-hoc signed app; not notarized.
+
+          SHA256SUMS.txt contains package checksums. Installation instructions are included.
+          NOTES
+          gh release create "$RELEASE_TAG" --draft --target "$SOURCE_COMMIT" --title "RoomBreak $RELEASE_TAG" --notes-file notes.md
+      - name: Verify packages and publish as bot
+        if: inputs.phase == 'publish'
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,author,targetCommitish > release.json
+          python3 - <<'PY'
+          import json, os
+          r = json.load(open('release.json'))
+          assert r['isDraft'] and r['author']['login'] == 'github-actions[bot]'
+          assert r['targetCommitish'] == os.environ['SOURCE_COMMIT']
+          PY
+          mkdir packages
+          gh release download "$RELEASE_TAG" --dir packages
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          p = Path('packages')
+          names = {'RoomBreak-Windows-amd64.exe', 'RoomBreak-iOS-arm64-unsigned.ipa',
+                   'RoomBreak-Android-arm64-v8a.apk', 'RoomBreak-macOS-arm64.pkg'}
+          assert {x.name for x in p.iterdir()} == names | {'SHA256SUMS.txt', 'INSTALL.txt'}
+          seen = set()
+          for line in (p/'SHA256SUMS.txt').read_text().splitlines():
+              digest, name = line.split('  ', 1)
+              assert name in names and name not in seen
+              assert hashlib.sha256((p/name).read_bytes()).hexdigest() == digest
+              seen.add(name)
+          assert seen == names
+          PY
+          # Re-upload with the installation token so every final asset belongs to the bot.
+          gh release upload "$RELEASE_TAG" packages/* --clobber
+          gh api "repos/$GH_REPO/releases" > verified-releases.json
+          python3 - <<'PY'
+          import json, os
+          r = next(r for r in json.load(open('verified-releases.json')) if r['tag_name'] == os.environ['RELEASE_TAG'])
+          assert r['draft'] and r['author']['login'] == 'github-actions[bot]'
+          assert len(r['assets']) == 6
+          assert all(a['state'] == 'uploaded' and a['uploader']['login'] == 'github-actions[bot]' for a in r['assets'])
+          PY
+          gh release edit "$RELEASE_TAG" --draft=false --latest
