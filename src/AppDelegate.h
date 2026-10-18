@@ -34,6 +34,8 @@ Private inheritance here hides part of interface from Director.
 */
 class AppDelegate : private ax::Application
 {
+    int pausedMusic_ = -1;
+
 public:
     AppDelegate();
     ~AppDelegate() override;

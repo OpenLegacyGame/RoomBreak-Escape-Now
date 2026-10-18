@@ -168,7 +168,7 @@ void TitleShop::endTouch(Vec2 point)
             message_ = nullptr;
             if (yes && unlockAll)
                 unlockAll();
-        });
+        }, sound);
         addChild(message_, 10);
     }
     else if (index == 6)

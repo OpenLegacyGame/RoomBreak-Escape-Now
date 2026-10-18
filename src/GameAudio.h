@@ -10,11 +10,11 @@ class GameAudio
 {
 public:
     explicit GameAudio(const UserSettings& settings) : settings_(settings) {}
-    // Replaces the current track; an empty name stops music.
+    // Resumes the same track, replaces a different track; an empty name stops music.
     void playMusic(std::string_view file);
     void play(std::string_view file, bool music);
     // Pauses music while a menu is open, resuming the remembered track afterwards.
-    void setMenuAudio(bool stopped);
+    void setMenuAudio(bool stopped, std::string_view defaultMusic = {});
     const std::string& musicFile() const { return musicFile_; }
     int musicId() const { return music_; }
 

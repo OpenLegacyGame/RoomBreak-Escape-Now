@@ -62,10 +62,12 @@ void StoryDialog::setup(int episode, int scene, int speed)
         const bool skip = pressed_ && hitSkip(t->getLocation());
         pressed_        = false;
         skipPressed_->setVisible(false);
-        if (busy_ || skin_->busy())
+        if (busy_)
             return;
         if (sound)
             sound("snd_f11", false);
+        if (skin_->busy())
+            return;
         if (skip)
             close();
         else

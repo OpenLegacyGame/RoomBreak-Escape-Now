@@ -201,7 +201,7 @@ void SystemMenu::confirm(const char* key, std::function<void()> action)
         message_ = nullptr;
         if (yes && action)
             action();
-    });
+    }, sound);
     addChild(message_, 10);
 }
 void SystemMenu::selectShop(int index)
@@ -234,7 +234,7 @@ void SystemMenu::click(int index)
             message_ = nullptr;
             if (yes && unlockAll)
                 unlockAll();
-        });
+        }, sound);
         addChild(message_, 10);
         return;
     }

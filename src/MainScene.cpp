@@ -228,7 +228,8 @@ void MainScene::click(int id)
 {
     if (loading_)
         return;
-    audio_.play(id == 5 ? "snd_f27" : "snd_f19", false);
+    if (id != 12 && id != 100)
+        audio_.play(id == 5 ? "snd_f27" : id == 26 ? "snd_f21" : "snd_f19", false);
     if (id == 5)
     {
         showStageSelect();
@@ -278,11 +279,14 @@ void MainScene::click(int id)
     if (id == 11)
         settings_.language = (settings_.language + 1) % 4;
     if (id == 12)
+    {
         settings_.effects = !settings_.effects;
+        audio_.play("snd_f19", false);
+    }
     if (id == 14)
     {
         settings_.music = !settings_.music;
-        audio_.setMenuAudio(!settings_.music);
+        audio_.setMenuAudio(!settings_.music, "EP0");
     }
     if (id == 16)
     {
@@ -418,7 +422,7 @@ void MainScene::startStage(int episode, int stage)
             settings_.save();
             refreshSettings();
         };
-        game->menuAudio      = [this](bool stop) { audio_.setMenuAudio(stop); };
+        game->menuAudio      = [this, game](bool stop) { audio_.setMenuAudio(stop, game->defaultMusic()); };
         game->retryRequested = [this, episode, stage] {
             transition([this, episode, stage] { startStage(episode, stage); });
         };

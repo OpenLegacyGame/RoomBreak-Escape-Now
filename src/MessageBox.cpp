@@ -5,11 +5,14 @@ using namespace ax;
 GameMessageBox* GameMessageBox::create(std::string_view text,
                                        int language,
                                        bool choice,
-                                       std::function<void(bool)> complete)
+                                       std::function<void(bool)> complete,
+                                       std::function<void(std::string_view)> sound)
 {
     auto* value      = rb::make<GameMessageBox>();
     value->choice_   = choice;
     value->complete_ = std::move(complete);
+    if (sound)
+        sound("snd_f12");
     value->setup(text, language);
     return value;
 }

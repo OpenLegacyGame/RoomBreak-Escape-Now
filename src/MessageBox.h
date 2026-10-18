@@ -5,7 +5,11 @@
 class GameMessageBox : public ax::Node
 {
 public:
-    static GameMessageBox* create(std::string_view text, int language, bool choice, std::function<void(bool)> complete);
+    static GameMessageBox* create(std::string_view text,
+                                  int language,
+                                  bool choice,
+                                  std::function<void(bool)> complete,
+                                  std::function<void(std::string_view)> sound = {});
     bool ready() const { return ready_; }
     void answer(bool yes);
     bool beginTouch(ax::Vec2 point);

@@ -117,6 +117,13 @@ void AppDelegate::applicationDidEnterBackground()
     Director::getInstance()->stopAnimation();
 
 #if USE_AUDIO_ENGINE
+    pausedMusic_ = -1;
+    if (auto* scene = dynamic_cast<MainScene*>(Director::getInstance()->getRunningScene()))
+    {
+        const int id = scene->musicId();
+        if (AudioEngine::getState(id) == AudioEngine::AudioState::PAUSED)
+            pausedMusic_ = id;
+    }
     AudioEngine::pauseAll();
 #endif
 }
@@ -127,7 +134,17 @@ void AppDelegate::applicationWillEnterForeground()
     Director::getInstance()->startAnimation();
 
 #if USE_AUDIO_ENGINE
+    // resumeAll also resumes music that was already paused by the menu.
+    const float volume = pausedMusic_ >= 0 ? AudioEngine::getVolume(pausedMusic_) : 0;
+    if (pausedMusic_ >= 0)
+        AudioEngine::setVolume(pausedMusic_, 0);
     AudioEngine::resumeAll();
+    if (pausedMusic_ >= 0)
+    {
+        AudioEngine::pause(pausedMusic_);
+        AudioEngine::setVolume(pausedMusic_, volume);
+        pausedMusic_ = -1;
+    }
 #endif
 }
 

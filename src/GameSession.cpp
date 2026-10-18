@@ -229,6 +229,12 @@ void GameSession::startWithIntro()
     };
     intro->start();
 }
+std::string GameSession::defaultMusic() const
+{
+    const auto& stage = *data_->stage("StageTable", state_.episode, state_.stage).front();
+    const int id      = rb::integer(stage, "soundID");
+    return id ? rb::string(data_->byId("SoundData", "soundID", id), "fileName") : std::string();
+}
 void GameSession::begin()
 {
     if (begun_)
@@ -241,8 +247,8 @@ void GameSession::begin()
     if (abilityInfo_)
         abilityInfo_->show(true);
     const auto& stage = *data_->stage("StageTable", state_.episode, state_.stage).front();
-    if (rb::integer(stage, "isSetSound") && sound)
-        sound(rb::string(data_->byId("SoundData", "soundID", rb::integer(stage, "soundID")), "fileName"), true);
+    if (sound)
+        sound(defaultMusic(), true);
     if (rb::integer(stage, "isSetEvent"))
         runEvent(rb::integer(stage, "eventID"));
 }
@@ -364,7 +370,7 @@ void GameSession::requestAbility(int type, int item, std::function<void()> compl
         }
         else
             shop_();
-    });
+    }, effectSound());
     addChild(message_, 20);
 }
 bool GameSession::useAbility(rb::Progress& progress, int type, std::function<void()> complete)
@@ -732,6 +738,9 @@ void GameSession::playStory(int scene, rb::EventRunner::Complete done)
     };
     story->gameUI   = [this](bool visible) { showUI(visible); };
     story->complete = [this, story, done] {
+        // EventSceneLayer::_exitLayer restores defSound before completing the event.
+        if (sound)
+            sound(defaultMusic(), true);
         story_ = nullptr;
         story->removeFromParent();
         done(true);

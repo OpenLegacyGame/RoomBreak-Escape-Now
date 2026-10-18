@@ -31,6 +31,7 @@ class GameSession : public ax::Node
 public:
     static GameSession* create(const rb::GameData&, int episode, int stage, int language, int speed, bool goldKey);
     void begin();
+    std::string defaultMusic() const;
     void startWithIntro();
     void showGameOver();
     void showClear();

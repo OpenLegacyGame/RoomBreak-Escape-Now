@@ -15,6 +15,7 @@ class MainScene : public ax::Scene
 {
 public:
     bool init() override;
+    int musicId() const { return audio_.musicId(); }
 #if RB_VISUAL_PROBE
     void startRouteDemo();
     GameSession* routeDemoSession() { return session_; }
