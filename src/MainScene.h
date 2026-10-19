@@ -29,6 +29,7 @@ public:
     void finishRouteDemo();
 #endif
 private:
+    ax::Node* canvas_ = nullptr;
     void createTitle();
     void beginLoading(bool tips, std::function<void()> complete);
     void showCredits();

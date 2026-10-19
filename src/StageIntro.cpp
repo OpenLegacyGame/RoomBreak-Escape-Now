@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "StageIntro.h"
 #include "NodeFactory.h"
 #include "Assets.h"
@@ -7,7 +8,7 @@ StageIntro* StageIntro::create(int stage)
 {
     auto* value = rb::make<StageIntro>();
     value->setContentSize({480, 320});
-    value->shade_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    value->shade_ = rb::screenShade(Color4B(0, 0, 0, 0));
     value->addChild(value->shade_);
     for (int i = 0; i < 2; ++i)
     {

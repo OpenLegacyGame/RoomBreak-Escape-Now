@@ -5,7 +5,7 @@
 #include <array>
 #include <functional>
 
-class StageSelect : public ax::Node
+class StageSelect : public ax::ClippingRectangleNode
 {
 public:
     static StageSelect* create(const rb::GameData& data,

@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "AbilityEffect.h"
 #include "NodeFactory.h"
 #include <stdexcept>
@@ -13,7 +14,7 @@ AbilityEffect* AbilityEffect::create(int type)
     auto* value  = rb::make<AbilityEffect>();
     value->type_ = type;
     value->setContentSize({480, 320});
-    value->shade_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    value->shade_ = rb::screenShade(Color4B(0, 0, 0, 0));
     value->addChild(value->shade_);
     value->particle_ = ParticleSystemQuad::create(particle);
     if (!value->particle_)

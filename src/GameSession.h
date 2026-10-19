@@ -142,6 +142,7 @@ private:
     bool begun_ = false, dragged_ = false, changingRoom_ = false;
     ax::Vec2 touchPoint_;
     ax::Vec2 gestureStart_;
+    bool gestureCancelled_ = false;
     ax::Vec2 shakeOrigin_;
     bool shaking_ = false;
 };

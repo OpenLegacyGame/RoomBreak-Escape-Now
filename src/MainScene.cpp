@@ -1,4 +1,5 @@
 #include "MainScene.h"
+#include "Viewport.h"
 #include "TitleShop.h"
 #include "LoadingScreen.h"
 #include "SaveStorage.h"
@@ -29,6 +30,7 @@ void originalVibration()
 
 #if RB_VISUAL_PROBE
 bool runVisualProbe(ax::Scene*, const rb::GameData&);
+bool runViewportProbe(ax::Scene*, ax::Node*, const rb::GameData&);
 bool runMainFlowProbe(MainScene*);
 #endif
 
@@ -36,9 +38,39 @@ bool MainScene::init()
 {
     if (!Scene::init())
         return false;
-    setContentSize({480, 320});
+    canvas_ = Node::create();
+    canvas_->setContentSize({480, 320});
+    addChild(canvas_);
+    rb::onViewport(this, [this] {
+        setContentSize(Director::getInstance()->getWinSize());
+        canvas_->setPosition(rb::canvasOrigin());
+    });
+    schedule([](float) { rb::updateViewport(); }, "viewport");
+#if (AX_TARGET_PLATFORM == AX_PLATFORM_WIN32) || (AX_TARGET_PLATFORM == AX_PLATFORM_MAC)
+    auto windowed = std::make_shared<Size>(960, 640);
+    auto* keys = EventListenerKeyboard::create();
+    keys->onKeyReleased = [windowed](EventKeyboard::KeyCode code, Event*) {
+        auto* view = static_cast<RenderViewImpl*>(Director::getInstance()->getRenderView());
+        if (code != EventKeyboard::KeyCode::KEY_F11 &&
+            !(code == EventKeyboard::KeyCode::KEY_ESCAPE && view->isFullscreen()))
+            return;
+        if (view->isFullscreen())
+            view->setWindowed(static_cast<int>(windowed->width), static_cast<int>(windowed->height));
+        else
+        {
+            int width, height;
+            view->getWindowSize(&width, &height);
+            *windowed = Size(width, height);
+            view->setFullscreen();
+        }
+        rb::updateViewport();
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(keys, this);
+#endif
     data_.load(FileUtils::getInstance()->getStringFromFile("GameData.json"));
 #if RB_VISUAL_PROBE
+    if (runViewportProbe(this, canvas_, data_))
+        return true;
     if (!std::getenv("RB_ROUTE_DEMO") && !std::getenv("RB_PROBE_FLOW") && runVisualProbe(this, data_))
         return true;
 #endif
@@ -128,9 +160,9 @@ Sprite* MainScene::addMenu(int id, const char* file, float x, float y, int paren
 }
 void MainScene::createTitle()
 {
-    title_ = Node::create();
+    title_ = ClippingRectangleNode::create({0, 0, 480, 320});
     title_->setContentSize({480, 320});
-    addChild(title_);
+    canvas_->addChild(title_);
     const Vec2 gears[] = {{357, -26}, {241, 32}, {345, 93}};
     for (int i = 0; i < 3; ++i)
     {
@@ -240,7 +272,7 @@ void MainScene::click(int id)
         if (shop_)
             return;
         shop_ = TitleShop::create(progress_, settings_.language);
-        addChild(shop_, 20);
+        canvas_->addChild(shop_, 20);
         shop_->unlockAll = [this] {
             progress_.unlockAllStages(data_);
             saveProgress();
@@ -313,7 +345,7 @@ void MainScene::beginLoading(bool tips, std::function<void()> complete)
         complete();
         loading_ = false;
     });
-    addChild(screen, 100);
+    canvas_->addChild(screen, 100);
 }
 void MainScene::transition(std::function<void()> next)
 {
@@ -351,7 +383,7 @@ void MainScene::showStageSelect(int displayedEpisode)
     beginLoading(true, [this, displayedEpisode] {
         auto* select = StageSelect::create(data_, progress_, settings_.language, displayedEpisode);
         selection_   = select;
-        addChild(select, 10);
+        canvas_->addChild(select, 10);
         select->sound = [this](std::string_view file) { audio_.play(file, false); };
         select->back  = [this] {
             transition([this] {
@@ -395,7 +427,7 @@ void MainScene::startStage(int episode, int stage)
         auto* game        = GameSession::create(data_, episode, stage, settings_.language, settings_.textSpeed,
                                                 progress_.stages.at(stageID).goldKey);
         session_          = game;
-        addChild(game, 10);
+        canvas_->addChild(game, 10);
         game->bindProgress(progress_);
         game->unlockAllRequested = [this] {
             progress_.unlockAllStages(data_);
@@ -444,7 +476,7 @@ void MainScene::showMovie(int episode, bool ending, std::function<void()> next)
     title_->setVisible(false);
     auto* movie = EpisodeMovie::create(episode, ending, settings_.language);
     movie_      = movie;
-    addChild(movie, 10);
+    canvas_->addChild(movie, 10);
     movie->music    = [this](std::string_view file) { audio_.playMusic(file); };
     movie->complete = [this, next = std::move(next)] {
         movie_ = nullptr;
@@ -466,9 +498,9 @@ void MainScene::acceptClear(int episode, int stage)
 void MainScene::showCredits()
 {
     title_->setVisible(false);
-    credits_ = Node::create();
+    credits_ = ClippingRectangleNode::create({0, 0, 480, 320});
     credits_->setContentSize({480, 320});
-    addChild(credits_, 20);
+    canvas_->addChild(credits_, 20);
     auto* bg = rb::sprite("title_info_bg.png");
     credits_->addChild(bg);
     bg->setPosition(240, 160);

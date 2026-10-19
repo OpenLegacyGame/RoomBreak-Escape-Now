@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "StoryDialog.h"
 #include "NodeFactory.h"
 #include "Episode5Dialog.h"
@@ -20,12 +21,14 @@ void StoryDialog::setup(int episode, int scene, int speed)
     setContentSize({480, 320});
     const auto& master = data_->byId("scene_master", "sceneID", scene);
     rows_              = data_->where("SceneData", "sceneID", scene);
-    shade_             = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    shade_             = rb::screenShade(Color4B(0, 0, 0, 0));
     addChild(shade_);
+    auto* skipControls = Node::create();
+    addChild(skipControls);
     skip_ = rb::sprite("dia_skip.png");
-    addChild(skip_);
+    skipControls->addChild(skip_);
     skipPressed_ = rb::sprite("dia_skip_p.png");
-    addChild(skipPressed_);
+    skipControls->addChild(skipPressed_);
     skipPressed_->setVisible(false);
     const auto size = skip_->getContentSize();
     skip_->setPosition(480 + size.width / 2, 320 - size.height / 2);
@@ -51,6 +54,8 @@ void StoryDialog::setup(int episode, int scene, int speed)
         throw std::runtime_error("Story skin not yet implemented for episode " + std::to_string(episode));
     }
     addChild(skin_);
+    rb::anchorToSafeArea(skipControls, 1, 1);
+    rb::anchorToSafeArea(skin_, .5f, 0);
     auto* touch = EventListenerTouchOneByOne::create();
     touch->setSwallowTouches(true);
     touch->onTouchBegan = [this](Touch* t, Event*) {

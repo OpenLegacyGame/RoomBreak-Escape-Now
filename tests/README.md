@@ -98,3 +98,17 @@ RB_PROBE_LANGUAGE=0 \
 使用干净终端，避免残留其他 `RB_PROBE_*` 或 `RB_ROUTE_DEMO` 设置。语言编号：`0` 简体中文、`1` 韩语、`2` 英语、`3` 日语。逐关脚本和连续演示脚本会自行设置语言。
 
 成功日志为 `RB_PROBE_EPISODE2_STAGE5 PASS`，并生成通关截图。只有程序正常退出、出现对应 `PASS`、且保存通关截图，才算该路线验证完成。程序只打开主菜单时，先检查是否编译了 `RB_VISUAL_PROBE=ON`。
+
+## 窗口与安全区域回归
+
+启用 `RB_VISUAL_PROBE=ON` 后，桌面版可运行连续窗口尺寸检查：
+
+```sh
+mkdir -p build/viewport-check
+RB_VIEWPORT_PROBE="$PWD/build/viewport-check" \
+  "build/macos-routes/bin/RoomBreakEscapeNow/RoomBreak Escape Now.app/Contents/MacOS/RoomBreak Escape Now"
+```
+
+检查包含不同宽高比、物件点击、按钮边缘位置、F11/Esc 全屏切换、镜头移动途中缩放、拖动边界和留边点击；输出 `checks.txt` 与各尺寸截图。全屏检查需要显示器处于唤醒状态。
+
+追加 `RB_VIEWPORT_SMALL_ROOM=1` 可检查小房间留边；追加 `RB_VIEWPORT_INSETS=40,0,40,16` 可模拟左、上、右、下安全边距（窗口坐标单位）。模拟安全区域仅用于开发构建，设备系统返回的真实安全区域仍需在设备上验证。

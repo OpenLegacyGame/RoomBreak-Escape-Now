@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "EpisodeMovie.h"
 #include "NodeFactory.h"
 #include "Assets.h"
@@ -11,7 +12,7 @@ EpisodeMovie* EpisodeMovie::create(int episode, bool ending, int language)
     auto* value     = rb::make<EpisodeMovie>();
     value->episode_ = episode;
     value->ending_  = ending;
-    value->addChild(LayerColor::create(Color4B::BLACK, 480, 320));
+    value->addChild(rb::screenShade(Color4B::BLACK));
     const int introCounts[] = {5, 6, 3, 4, 3, 14}, endingCounts[] = {4, 6, 4, 3, 6, 8};
     const char* suffix[] = {"chi", "kor", "eng", "jap"};
     float x              = 0;
@@ -45,7 +46,7 @@ EpisodeMovie* EpisodeMovie::create(int episode, bool ending, int language)
     }
     value->fastPressed_->setVisible(false);
     value->skipPressed_->setVisible(false);
-    value->fade_ = LayerColor::create(Color4B::BLACK, 480, 320);
+    value->fade_ = rb::screenShade(Color4B::BLACK);
     value->addChild(value->fade_);
     auto* touch = EventListenerTouchOneByOne::create();
     touch->setSwallowTouches(true);

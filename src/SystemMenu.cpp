@@ -1,4 +1,5 @@
 #include "SystemMenu.h"
+#include "Viewport.h"
 #include "NodeFactory.h"
 #include "Assets.h"
 #include "MessageBox.h"
@@ -32,10 +33,13 @@ void SystemMenu::setup()
     playP_          = rb::sprite("ui_play_p.png");
     back_           = rb::sprite("main_back.png");
     backP_          = rb::sprite("main_back_p.png");
+    auto* corner = Node::create();
+    addChild(corner);
+    rb::anchorToSafeArea(corner, 1, 1);
     const auto size = play_->getContentSize();
     for (auto* node : {play_, playP_, back_, backP_})
     {
-        addChild(node);
+        corner->addChild(node);
         node->setPosition(480 + size.width / 2, 320 - size.height / 2);
     }
     playP_->setVisible(false);

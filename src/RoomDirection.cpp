@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "RoomView.h"
 #include "Assets.h"
 #include <stdexcept>
@@ -65,7 +66,7 @@ Vec2 RoomView::roomPoint(Node* node, float x, float y) const
 }
 LayerColor* RoomView::whiteFlash()
 {
-    auto* white = LayerColor::create(Color4B(255, 255, 255, 0), 480, 320);
+    auto* white = rb::screenShade(Color4B(255, 255, 255, 0));
     getParent()->addChild(white, 6);
     return white;
 }

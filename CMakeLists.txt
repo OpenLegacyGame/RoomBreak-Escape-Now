@@ -138,7 +138,7 @@ endif()
 
 option(RB_VISUAL_PROBE "Build development renderer checks" OFF)
 if(RB_VISUAL_PROBE)
-  target_sources(${APP_NAME} PRIVATE tests/VisualProbe.cpp tests/MainFlowProbe.cpp)
+  target_sources(${APP_NAME} PRIVATE tests/VisualProbe.cpp tests/MainFlowProbe.cpp tests/ViewportProbe.cpp)
   target_compile_definitions(${APP_NAME} PRIVATE RB_VISUAL_PROBE=1)
 endif()
 

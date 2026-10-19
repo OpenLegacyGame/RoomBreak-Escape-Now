@@ -28,6 +28,7 @@ StageSelect* StageSelect::create(const rb::GameData& data, rb::Progress& progres
 void StageSelect::setup()
 {
     setContentSize({480, 320});
+    setClippingRegion({0, 0, 480, 320});
     rb::place(this, "main_gear_bg1.png", 18, 172);
     const float angle[] = {29, -20, -60}, startX[] = {0, 126, 10}, startY[] = {200, 320, 320};
     for (int g = 0; g < 3; ++g)
@@ -186,6 +187,9 @@ void StageSelect::notify(const char* key)
 }
 int StageSelect::hit(Vec2 p) const
 {
+    const auto local = convertToNodeSpace(p);
+    if (!getClippingRegion().containsPoint(local))
+        return -1;
     if (contains(back_, p))
         return 100;
     if (opened_)
@@ -201,9 +205,9 @@ int StageSelect::hit(Vec2 p) const
     {
         if (contains(symbols_[episode_], p))
             return 10;
-        if (p.x < 100 && episode_ > 0)
+        if (local.x < 100 && episode_ > 0)
             return 11;
-        if (p.x > 370 && episode_ < 6)
+        if (local.x > 370 && episode_ < 6)
             return 12;
     }
     return -1;

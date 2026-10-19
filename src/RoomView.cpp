@@ -1,4 +1,5 @@
 #include "RoomView.h"
+#include "Viewport.h"
 #include "NodeFactory.h"
 #include "Assets.h"
 #include <algorithm>
@@ -9,8 +10,45 @@ RoomView* RoomView::create(const rb::GameData& data, rb::StageState& state)
     view->data_  = &data;
     view->state_ = &state;
     view->setContentSize({480, 320});
+    view->viewport_ = rb::viewportBounds();
     view->loadRoom(state.room);
+    rb::onViewport(view, [view] { view->updateViewport(); });
+    view->schedule([view](float) { view->updateClip(); }, "viewport-clip");
     return view;
+}
+std::pair<float, float> RoomView::horizontalLimits() const
+{
+    const float width = background_->getContentSize().width;
+    if (width <= viewport_.size.width)
+    {
+        const float center = viewport_.getMidX() - width / 2;
+        return {center, center};
+    }
+    return {viewport_.getMaxX() - width, viewport_.getMinX()};
+}
+float RoomView::positionX(int position) const
+{
+    const auto [left, right] = horizontalLimits();
+    return right + (left - right) * std::clamp(position, 0, 4) / 4;
+}
+void RoomView::updateViewport()
+{
+    const float center = viewport_.getMidX() - background_->getPositionX();
+    viewport_ = rb::viewportBounds();
+    const auto [left, right] = horizontalLimits();
+    background_->setPosition(std::clamp(viewport_.getMidX() - center, left, right),
+                             viewport_.getMidY() - background_->getContentSize().height / 2);
+    beginDrag();
+    updateClip();
+}
+void RoomView::updateClip()
+{
+    const auto image = ax::Rect(background_->getPosition(), background_->getContentSize());
+    const float left = std::max(viewport_.getMinX(), image.getMinX());
+    const float bottom = std::max(viewport_.getMinY(), image.getMinY());
+    const float right = std::min(viewport_.getMaxX(), image.getMaxX());
+    const float top = std::min(viewport_.getMaxY(), image.getMaxY());
+    setClippingRegion({left, bottom, std::max(0.f, right - left), std::max(0.f, top - bottom)});
 }
 void RoomView::after(float seconds, std::function<void()> callback)
 {
@@ -39,6 +77,10 @@ void RoomView::loadRoom(int id, int position)
             action.sprite->stopAllActions();
             action.sprite->removeFromParent();
         }
+    unschedule("room-position");
+    unschedule("room-slide");
+    unschedule("room-settle");
+    unschedule("drag-time");
     state_->room = id;
     removeAllChildren();
     sprites_.clear();
@@ -48,7 +90,8 @@ void RoomView::loadRoom(int id, int position)
     addChild(background_);
     background_->setAnchorPoint(Vec2::ZERO);
     const auto size = background_->getContentSize();
-    background_->setPosition(-(size.width - 480) * position / 4, -(size.height - 320) / 2);
+    background_->setPosition(positionX(position), viewport_.getMidY() - size.height / 2);
+    updateClip();
     const auto objects = data_->where("ObjectData", "roomID", id);
     for (int layer = rb::integer(room, "maxLayer"); layer >= 1; --layer)
         for (auto* object : objects)
@@ -139,8 +182,14 @@ Vec2 RoomView::objectPosition(int object) const
     }
     return {(left + right) / 2.f, (top + bottom) / 2.f};
 }
+bool RoomView::containsPoint(Vec2 worldPoint) const
+{
+    return getClippingRegion().containsPoint(convertToNodeSpace(worldPoint));
+}
 int RoomView::hitObject(Vec2 worldPoint) const
 {
+    if (!containsPoint(worldPoint))
+        return 0;
     const auto local = background_->convertToNodeSpace(worldPoint);
     return state_->objectAt(*data_, local.x, background_->getContentSize().height - local.y);
 }
@@ -181,9 +230,35 @@ void RoomView::setActive(int object, bool visible, std::function<void()> complet
 }
 void RoomView::movePosition(int p, float seconds, std::function<void()> complete)
 {
-    const Vec2 target(-(background_->getContentSize().width - 480) * p / 4, background_->getPositionY());
-    background_->runAction(Sequence::create(EaseIn::create(MoveTo::create(seconds, target), .5f),
-                                            CallFunc::create(std::move(complete)), nullptr));
+    moveCamera([this, p] { return positionX(p); }, seconds, .5f, std::move(complete));
+}
+void RoomView::focusObject(int object, float seconds, std::function<void()> complete)
+{
+    moveCamera([this, object] {
+        const auto [left, right] = horizontalLimits();
+        return std::clamp(viewport_.getMidX() - objectPosition(object).x, left, right);
+    }, seconds, .25f, std::move(complete));
+}
+void RoomView::moveCamera(std::function<float()> target, float seconds, float easing, std::function<void()> complete)
+{
+    // Recompute the destination during a resize without losing the completion barrier.
+    const float startX = background_->getPositionX();
+    const auto startLimits = horizontalLimits();
+    const float startFraction = startLimits.second > startLimits.first
+        ? (startLimits.second - startX) / (startLimits.second - startLimits.first) : .5f;
+    auto elapsed = std::make_shared<float>(0);
+    schedule([this, target = std::move(target), seconds, easing, startFraction, elapsed, complete = std::move(complete)](float dt) {
+        *elapsed += dt;
+        const float t = seconds > 0 ? std::min(*elapsed / seconds, 1.f) : 1.f;
+        const auto limits = horizontalLimits();
+        const float from = limits.second + (limits.first - limits.second) * startFraction;
+        background_->setPositionX(from + (target() - from) * std::pow(t, easing));
+        if (t >= 1)
+        {
+            unschedule("room-position");
+            complete();
+        }
+    }, "room-position");
 }
 void RoomView::beginDrag()
 {
@@ -194,8 +269,14 @@ void RoomView::beginDrag()
 }
 void RoomView::drag(float delta)
 {
-    const float min = 480 - background_->getContentSize().width;
-    background_->setPositionX(std::clamp(background_->getPositionX() + delta * .8f, min - 100, 100.f));
+    const auto [min, max] = horizontalLimits();
+    if (min == max)
+    {
+        background_->setPositionX(min);
+        velocity_ = 0;
+        return;
+    }
+    background_->setPositionX(std::clamp(background_->getPositionX() + delta * .8f, min - 100, max + 100));
     velocity_ = delta;
     if (!isScheduled("drag-time"))
         schedule([this](float) {
@@ -210,22 +291,22 @@ void RoomView::settle()
 {
     unschedule("drag-time");
     schedule([this](float) {
-        const float min = 480 - background_->getContentSize().width;
+        const auto [min, max] = horizontalLimits();
         velocity_ /= 1.2f;
-        const float x = std::clamp(background_->getPositionX() + velocity_, min - 100, 100.f);
+        const float x = std::clamp(background_->getPositionX() + velocity_, min - 100, max + 100);
         background_->setPositionX(x);
-        if (std::abs(velocity_) <= .1f || x < min || x > 0)
+        if (std::abs(velocity_) <= .1f || x < min || x > max)
         {
             velocity_ = 0;
             unschedule("room-slide");
             schedule([this](float) {
-                const float min = 480 - background_->getContentSize().width;
+                const auto [min, max] = horizontalLimits();
                 float x         = background_->getPositionX();
-                if (x > 0)
+                if (x > max)
                 {
-                    x /= 1.2f;
-                    if (x <= .1f)
-                        x = 0;
+                    x = max + (x - max) / 1.2f;
+                    if (x <= max + .1f)
+                        x = max;
                 }
                 if (x < min)
                 {
@@ -234,7 +315,7 @@ void RoomView::settle()
                         x = min;
                 }
                 background_->setPositionX(x);
-                if (x >= min && x <= 0)
+                if (x >= min && x <= max)
                     unschedule("room-settle");
             }, .01f, "room-settle");
         }

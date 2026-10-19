@@ -2,7 +2,7 @@
 #include "axmol.h"
 #include "Progress.h"
 class GameMessageBox;
-class TitleShop : public ax::Node
+class TitleShop : public ax::ClippingRectangleNode
 {
 public:
     static TitleShop* create(const rb::Progress&, int language);

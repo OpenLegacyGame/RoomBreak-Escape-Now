@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "GameOverOverlay.h"
 #include "NodeFactory.h"
 #include "Assets.h"
@@ -5,7 +6,7 @@ using namespace ax;
 GameOverOverlay* GameOverOverlay::create()
 {
     auto* value   = rb::make<GameOverOverlay>();
-    value->shade_ = LayerColor::create(Color4B(255, 0, 0, 0), 480, 320);
+    value->shade_ = rb::screenShade(Color4B(255, 0, 0, 0));
     value->addChild(value->shade_);
     value->bg_ = rb::sprite("gameover_bg.png");
     value->addChild(value->bg_);

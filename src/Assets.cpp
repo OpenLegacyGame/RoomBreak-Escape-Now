@@ -34,7 +34,13 @@ ax::Vec2 topLeft(ax::Node* parent, ax::Node* child, float x, float y)
 }
 bool hitTest(ax::Node* node, ax::Vec2 world)
 {
-    return ax::Rect(ax::Vec2::ZERO, node->getContentSize()).containsPoint(node->convertToNodeSpace(world));
+    if (!ax::Rect(ax::Vec2::ZERO, node->getContentSize()).containsPoint(node->convertToNodeSpace(world)))
+        return false;
+    for (auto* parent = node->getParent(); parent; parent = parent->getParent())
+        if (auto* clip = dynamic_cast<ax::ClippingRectangleNode*>(parent); clip && clip->isClippingEnabled())
+            if (!clip->getClippingRegion().containsPoint(clip->convertToNodeSpace(world)))
+                return false;
+    return true;
 }
 const char* font(int language)
 {

@@ -141,7 +141,7 @@ void ActionCut::move(Vec2 p)
         auto* trail = DrawNode::create();
         trail->setBlendFunc(BlendFunc::ADDITIVE);
         trails_->addChild(trail);
-        const auto a = last_, b = p;
+        const auto a = trails_->convertToNodeSpace(last_), b = trails_->convertToNodeSpace(p);
         auto age = std::make_shared<float>(0);
         trail->drawLine(a, b, Color4F(0, 1, 0, 1), 12);
         trail->schedule([trail, a, b, age](float dt) {

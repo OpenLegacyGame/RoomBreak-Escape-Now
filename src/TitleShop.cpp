@@ -24,6 +24,7 @@ void TitleShop::setup(const rb::Progress& progress)
 {
     progress_ = &progress;
     setContentSize({480, 320});
+    setClippingRegion({0, 0, 480, 320});
     background_ = rb::sprite("title_shop_bg.png");
     addChild(background_);
     background_->setPosition(240, 160);

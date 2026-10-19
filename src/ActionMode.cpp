@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "ActionMode.h"
 #include "Assets.h"
 #include "ResultFeedback.h"
@@ -7,9 +8,12 @@ bool ActionMode::initialize(int level, int hands)
     if (!Node::init())
         return false;
     setContentSize({480, 320});
-    shade_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    shade_ = rb::screenShade(Color4B(0, 0, 0, 0));
     addChild(shade_);
     setup(level);
+    auto* controls = Node::create();
+    addChild(controls, 100);
+    rb::anchorToSafeArea(controls, 1, 1);
     const char* files[]   = {"ability_short_hands.png", "det_retry-1.png", "det_close-1.png"};
     const char* pressed[] = {"ability_short_hands_p.png", "det_retry_p-1.png", "det_close_p-1.png"};
     const float tops[]    = {118, 172, 226};
@@ -19,7 +23,7 @@ bool ActionMode::initialize(int level, int hands)
         pressedImages_[i] = rb::sprite(pressed[i]);
         for (auto* s : {menus_[i], pressedImages_[i]})
         {
-            addChild(s, 100);
+            controls->addChild(s);
             s->setPosition(480 + s->getContentSize().width / 2, 320 - tops[i] - s->getContentSize().height / 2);
         }
         pressedImages_[i]->setVisible(false);

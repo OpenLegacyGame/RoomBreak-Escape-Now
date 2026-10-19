@@ -4,7 +4,7 @@
 #include "SheetSprite.h"
 #include <functional>
 #include <set>
-class RoomView : public ax::Node
+class RoomView : public ax::ClippingRectangleNode
 {
 public:
     static RoomView* create(const rb::GameData& data, rb::StageState& state);
@@ -12,10 +12,12 @@ public:
     ax::Vec2 objectPosition(int object) const;
     void refreshShining();
     bool isShining(int object) const { return shine_.contains(object); }
+    bool containsPoint(ax::Vec2 worldPoint) const;
     int hitObject(ax::Vec2 worldPoint) const;
     void changeState(int object, int state, std::function<void()> complete);
     void setActive(int object, bool visible, std::function<void()> complete);
     void movePosition(int position, float duration, std::function<void()> complete);
+    void focusObject(int object, float duration, std::function<void()> complete);
     bool direction(int id, std::function<void()> complete);
     std::size_t directionAnimationCount() const { return directionAnimations_.size() + directionActions_.size(); }
     std::size_t directionParticleCount() const { return directionParticles_.size(); }
@@ -30,6 +32,12 @@ public:
     ax::Sprite* stateImage(int stateId) const;
 
 private:
+    void moveCamera(std::function<float()> target, float duration, float easing, std::function<void()> complete);
+    void updateViewport();
+    void updateClip();
+    std::pair<float, float> horizontalLimits() const;
+    float positionX(int position) const;
+    ax::Rect viewport_{0, 0, 480, 320};
     void after(float seconds, std::function<void()> callback);
     const rb::GameData* data_ = nullptr;
     rb::StageState* state_    = nullptr;

@@ -29,6 +29,7 @@
 #    include <stdexcept>
 #endif
 #include "MainScene.h"
+#include "Viewport.h"
 
 #define USE_AUDIO_ENGINE 1
 
@@ -82,11 +83,14 @@ bool AppDelegate::applicationDidFinishLaunching()
     if (!renderView)
     {
 #if (AX_TARGET_PLATFORM != AX_PLATFORM_ANDROID) && (AX_TARGET_PLATFORM != AX_PLATFORM_IOS)
-        renderView = RenderViewImpl::createWithRect("RoomBreak Escape Now", ax::Rect(0, 0, 960, 640));
+        renderView = RenderViewImpl::createWithRect("RoomBreak Escape Now", ax::Rect(0, 0, 960, 640), 1, true);
 #else
         renderView = RenderViewImpl::create("RoomBreak Escape Now");
 #endif
         director->setRenderView(renderView);
+#if (AX_TARGET_PLATFORM == AX_PLATFORM_WIN32) || (AX_TARGET_PLATFORM == AX_PLATFORM_MAC)
+        static_cast<RenderViewImpl*>(renderView)->setWindowSizeLimits(480, 320);
+#endif
     }
 
     // turn on display FPS
@@ -99,6 +103,7 @@ bool AppDelegate::applicationDidFinishLaunching()
     // Set the design resolution
     renderView->setDesignResolutionSize(designResolutionSize.width, designResolutionSize.height,
                                         ResolutionPolicy::SHOW_ALL);
+    rb::updateViewport();
 
 #if !_AX_TESTS
     // create a scene. it's an autorelease object

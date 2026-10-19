@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "LoadingScreen.h"
 #include "NodeFactory.h"
 #include "Assets.h"
@@ -12,7 +13,7 @@ LoadingScreen* LoadingScreen::create(int language, bool tips, std::function<void
 void LoadingScreen::setup(int language, bool tips, std::function<void()> complete)
 {
     setContentSize({480, 320});
-    addChild(LayerColor::create(Color4B::BLACK, 480, 320));
+    addChild(rb::screenShade(Color4B::BLACK));
     // LoadingLayer advances its process-wide tip counter for both screen types.
     static int tip = 1;
     tip            = tip % 10 + 1;

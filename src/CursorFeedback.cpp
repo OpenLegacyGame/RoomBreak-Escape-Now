@@ -25,7 +25,7 @@ CursorFeedback* CursorFeedback::create(const rb::GameData& data)
 void CursorFeedback::emit(int index, Vec2 point)
 {
     auto* p = particles_.at(index);
-    p->setPosition(point);
+    p->setPosition(convertToNodeSpace(point));
     p->setVisible(true);
     p->resetSystem();
 }
@@ -69,7 +69,7 @@ void CursorFeedback::itemAction(int item, Vec2 point, bool success)
         itemSprite_->removeFromParent();
     itemSprite_ = rb::sprite(rb::string(data_->byId("ItemData", "itemID", item), "imageName"));
     addChild(itemSprite_);
-    itemSprite_->setPosition(point);
+    itemSprite_->setPosition(convertToNodeSpace(point));
     itemSprite_->setScale(.2f);
     itemSprite_->setOpacity(success ? 50 : 180);
     if (!success)

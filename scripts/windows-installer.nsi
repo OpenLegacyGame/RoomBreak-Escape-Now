@@ -52,7 +52,7 @@ Section "RoomBreak Escape Now"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\RoomBreakRebuilt" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayName" "RoomBreak Escape Now"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayVersion" "1.0.1"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayVersion" "1.0.2"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "NoModify" 1

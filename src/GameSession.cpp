@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "GameSession.h"
 #include "NodeFactory.h"
 #include "RoomView.h"
@@ -26,6 +27,7 @@ namespace
 {
 // Finger taps include small move events; a drag starts only beyond six logical points.
 constexpr float tapSlopSquared = 36;
+constexpr int shakeActionTag = 0x52425348;
 }  // namespace
 GameSession* GameSession::create(const rb::GameData& data,
                                  int episode,
@@ -57,6 +59,19 @@ void GameSession::setup(const rb::GameData& data, int episode, int stage, int la
     events_->afterGroup = [this] { checkConditions(); };
     setupHud();
     setupTouch();
+    rb::anchorToSafeArea(heroHealth_, 0, 0);
+    rb::anchorToSafeArea(pocket_, 1, 1);
+    rb::anchorToSafeArea(pauseButton_, 1, 1);
+    rb::anchorToSafeArea(inventory_, 0, 0);
+    rb::onViewport(this, [this] {
+        gestureCancelled_ = true;
+        // An in-flight MoveTo holds old viewport coordinates.
+        if (shaking_)
+        {
+            room_->background()->stopActionByTag(shakeActionTag);
+            shaking_ = false;
+        }
+    });
 }
 void GameSession::setupHud()
 {
@@ -100,14 +115,16 @@ void GameSession::setupTouch()
     auto* touch = EventListenerTouchOneByOne::create();
     touch->setSwallowTouches(true);
     touch->onTouchBegan = [this](Touch* t, Event*) {
-        if (interfaceBlocked() || inventory_->opened())
+        if (interfaceBlocked() || inventory_->opened() || !room_->containsPoint(t->getLocation()))
             return false;
+        gestureCancelled_ = false;
         dragged_      = false;
         gestureStart_ = t->getLocation();
         room_->beginDrag();
         return true;
     };
     touch->onTouchMoved = [this](Touch* t, Event*) {
+        if (gestureCancelled_) return;
         const auto displacement = t->getLocation() - gestureStart_;
         if (!dragged_)
         {
@@ -121,6 +138,7 @@ void GameSession::setupTouch()
             room_->drag(t->getDelta().x);
     };
     touch->onTouchEnded = [this](Touch* t, Event*) {
+        if (gestureCancelled_) return;
         if (!dragged_ && (t->getLocation() - gestureStart_).lengthSquared() <= tapSlopSquared)
             tap(t->getLocation());
         room_->settle();
@@ -319,6 +337,7 @@ void GameSession::bindProgress(rb::Progress& progress, std::function<void()> sho
     shop_        = shop ? std::move(shop) : std::function<void()>([this] { openSystemMenu(3); });
     abilityInfo_ = AbilityInfo::create(progress);
     addChild(abilityInfo_, 7);
+    rb::anchorToSafeArea(abilityInfo_, 0, 1);
     abilityInfo_->request = [this](int type) { requestAbility(type); };
     abilityInfo_->blocked = [this] { return interfaceBlocked() || inventory_->opened(); };
     if (begun_)
@@ -451,7 +470,7 @@ void GameSession::moveRoom(int room, int position, std::function<void()> complet
     changingRoom_  = true;
     state_.room    = room;
     cursorOutcome_ = 2;
-    auto* shade    = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    auto* shade    = rb::screenShade(Color4B(0, 0, 0, 0));
     addChild(shade, 6);
     shade->runAction(
         Sequence::create(EaseOut::create(FadeIn::create(.5f), .25f), CallFunc::create([this, room, position] {
@@ -481,7 +500,7 @@ void GameSession::selectCursor(int cursor, int item)
 }
 void GameSession::tap(Vec2 point)
 {
-    if (interfaceBlocked() || inventory_->opened())
+    if (interfaceBlocked() || inventory_->opened() || !room_->containsPoint(point))
         return;
     touchPoint_        = point;
     cursorOutcome_     = 4;
@@ -557,13 +576,16 @@ void GameSession::shake(int strength, float duration)
     auto* background = room_->background();
     if (shaking_)
         background->setPosition(shakeOrigin_);
+    background->stopActionByTag(shakeActionTag);
     shakeOrigin_          = background->getPosition();
     shaking_              = true;
     const float amplitude = strength == 0 ? 5 : strength == 1 ? 10 : strength == 2 ? 15 : 0;
     auto* cycle           = Sequence::create(MoveTo::create(.05f, shakeOrigin_ - Vec2(amplitude, 0)),
                                              MoveTo::create(.05f, shakeOrigin_), nullptr);
-    background->runAction(Sequence::create(Repeat::create(cycle, static_cast<unsigned>(duration / .1f)),
-                                           CallFunc::create([this] { shaking_ = false; }), nullptr));
+    auto* action = Sequence::create(Repeat::create(cycle, static_cast<unsigned>(duration / .1f)),
+                                    CallFunc::create([this] { shaking_ = false; }), nullptr);
+    action->setTag(shakeActionTag);
+    background->runAction(action);
 }
 void GameSession::basicDialog(std::string_view text)
 {
@@ -693,7 +715,7 @@ void GameSession::openDetail(int id, rb::EventRunner::Complete done)
         throw std::runtime_error("Concurrent detail views");
     const auto origin =
         touchObject_ ? room_->background()->convertToWorldSpace(room_->objectPosition(touchObject_)) : touchPoint_;
-    detail_ = DetailView::create(*data_, id, origin, language_, progress_ ? progress_->hands : 0);
+    detail_ = DetailView::create(*data_, id, convertToNodeSpace(origin), language_, progress_ ? progress_->hands : 0);
     presentPuzzle(detail_, detailShop_, std::move(done));
 }
 void GameSession::receiveItem(int id, bool removeObject, rb::EventRunner::Complete done)

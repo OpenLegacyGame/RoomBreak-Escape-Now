@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "ClearOverlay.h"
 #include "NodeFactory.h"
 #include "Assets.h"
@@ -6,7 +7,7 @@ ClearOverlay* ClearOverlay::create(std::string rank)
 {
     auto* value   = rb::make<ClearOverlay>();
     value->rank_  = std::move(rank);
-    value->shade_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    value->shade_ = rb::screenShade(Color4B(0, 0, 0, 0));
     value->addChild(value->shade_);
     value->bg_ = rb::sprite("clear_bg-1.png");
     value->addChild(value->bg_);
@@ -94,7 +95,7 @@ void ClearOverlay::choose(bool exitToMenu)
     ready_ = false;
     if (sound)
         sound("snd_f19");
-    auto* fade = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    auto* fade = rb::screenShade(Color4B(0, 0, 0, 0));
     addChild(fade, 10);
     fade->runAction(Sequence::create(FadeIn::create(.5f), CallFunc::create([this, exitToMenu] {
         auto callback = std::move(complete);

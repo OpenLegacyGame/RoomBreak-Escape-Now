@@ -1,3 +1,4 @@
+#include "Viewport.h"
 #include "InsightOverlay.h"
 #include "NodeFactory.h"
 #include "GameSession.h"
@@ -16,7 +17,7 @@ InsightOverlay* InsightOverlay::create(const rb::GameData& data, GameSession& se
     value->originalRoom_ = session.state().room;
     for (auto* row : data.where("ItemUse", "itemID", item))
         value->targets_.push_back(rb::integer(*row, "useObjectID"));
-    value->shade_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 320);
+    value->shade_ = rb::screenShade(Color4B(0, 0, 0, 0));
     value->addChild(value->shade_);
     value->effect_ = ParticleSystemQuad::create("par_ability_insight.plist");
     value->marker_ = ParticleSystemQuad::create("par_ability_itempos.plist");
@@ -28,6 +29,14 @@ InsightOverlay* InsightOverlay::create(const rb::GameData& data, GameSession& se
         p->stopSystem();
         p->setVisible(false);
     }
+    value->schedule([value](float) {
+        if (value->markedObject_)
+        {
+            auto* room = value->session_->room();
+            value->marker_->setPosition(value->convertToNodeSpace(
+                room->background()->convertToWorldSpace(room->objectPosition(value->markedObject_))));
+        }
+    }, "insight-marker");
     value->effect_->setPosition(240, 160);
     const char* suffix = language == 1 ? "kor" : language == 3 ? "jap" : "eng";
     value->info_       = rb::sprite(std::string("think_bg_") + suffix + ".png");
@@ -70,16 +79,7 @@ void InsightOverlay::nextTarget()
         session_->moveRoom(room, 0, [this] { nextTarget(); });
         return;
     }
-    auto* bg         = session_->room()->background();
-    const auto point = session_->room()->objectPosition(targets_[target_]);
-    const float x    = std::clamp(240 - point.x, 480 - bg->getContentSize().width, 0.f);
-    if (bg->getPositionX() == x)
-    {
-        mark();
-        return;
-    }
-    bg->runAction(Sequence::create(EaseIn::create(MoveTo::create(.5f, {x, bg->getPositionY()}), .25f),
-                                   CallFunc::create([this] { mark(); }), nullptr));
+    session_->room()->focusObject(targets_[target_], .5f, [this] { mark(); });
 }
 void InsightOverlay::mark()
 {
