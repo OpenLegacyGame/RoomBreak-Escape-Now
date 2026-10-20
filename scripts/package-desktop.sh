@@ -16,7 +16,7 @@ case "${1:-}" in
     codesign --verify --deep --strict "$stage/root/RoomBreak Escape Now.app"
     pkgbuild --analyze --root "$stage/root" "$stage/components.plist"
     /usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable false' "$stage/components.plist"
-    pkgbuild --root "$stage/root" --component-plist "$stage/components.plist" --identifier local.roombreak.rebuilt.installer --version 1.0.2 --install-location /Applications "$output"
+    pkgbuild --root "$stage/root" --component-plist "$stage/components.plist" --identifier local.roombreak.rebuilt.installer --version 1.0.3 --install-location /Applications "$output"
     ;;
   windows)
     [[ $# == 4 ]] || exit 2

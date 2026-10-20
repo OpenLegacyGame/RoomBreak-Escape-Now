@@ -4,6 +4,9 @@
 using namespace ax;
 void EpisodeDialog::configure(int language, int speed, bool showCharacter)
 {
+    // Dialogue artwork enters and exits through the original canvas edges.
+    // Wider room views must not expose sprites parked outside those edges.
+    setClippingRegion({0, 0, 480, 320});
     language_      = language;
     speed_         = speed;
     showCharacter_ = showCharacter;

@@ -112,3 +112,13 @@ RB_VIEWPORT_PROBE="$PWD/build/viewport-check" \
 检查包含不同宽高比、物件点击、按钮边缘位置、F11/Esc 全屏切换、镜头移动途中缩放、拖动边界和留边点击；输出 `checks.txt` 与各尺寸截图。全屏检查需要显示器处于唤醒状态。
 
 追加 `RB_VIEWPORT_SMALL_ROOM=1` 可检查小房间留边；追加 `RB_VIEWPORT_INSETS=40,0,40,16` 可模拟左、上、右、下安全边距（窗口坐标单位）。模拟安全区域仅用于开发构建，设备系统返回的真实安全区域仍需在设备上验证。
+
+Issue #3 的成功提示与对话立绘检查：
+
+```sh
+mkdir -p build/overlay-check
+RB_OVERLAY_VIEWPORT_PROBE="$PWD/build/overlay-check" \
+  "build/macos-routes/bin/RoomBreakEscapeNow/RoomBreak Escape Now.app/Contents/MacOS/RoomBreak Escape Now"
+```
+
+覆盖标准、宽屏和高窗口：成功底条覆盖视口、文字比例、EP2-3 独白隐藏人物、立绘进出场裁剪和正常人物对话。输出 `checks.txt` 与成功提示、独白截图。可追加上述安全边距变量检查安全区布局。

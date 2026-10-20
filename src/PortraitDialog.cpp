@@ -97,6 +97,7 @@ void PortraitDialog::setup()
     layout_ = layoutFor(episode_);
     setContentSize({480, 320});
     portrait_ = rb::sprite(layout_.portrait);
+    portrait_->setVisible(showCharacter_);
     addChild(portrait_);
     const auto size = portrait_->getContentSize();
     portrait_->setPosition(-size.width / 2, size.height / 2);

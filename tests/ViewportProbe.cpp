@@ -5,6 +5,11 @@
 #include "AbilityInfo.h"
 #include "InventoryView.h"
 #include "Progress.h"
+#include "StoryDialog.h"
+#include "EpisodeDialog.h"
+#include "PortraitDialog.h"
+#include "Episode5Dialog.h"
+#include "ResultFeedback.h"
 #include <cstdlib>
 #include <fstream>
 #include <stdexcept>
@@ -15,9 +20,124 @@ void require(bool value, const char* message)
 {
     if (!value) throw std::runtime_error(message);
 }
+
+template<class T> T* descendant(Node* root)
+{
+    for (auto* child : root->getChildren())
+    {
+        if (auto* match = dynamic_cast<T*>(child)) return match;
+        if (auto* match = descendant<T>(child)) return match;
+    }
+    return nullptr;
+}
+bool runOverlayProbe(Scene* scene, Node* canvas, const rb::GameData& data)
+{
+    const char* output = std::getenv("RB_OVERLAY_VIEWPORT_PROBE");
+    if (!output) return false;
+#if (AX_TARGET_PLATFORM == AX_PLATFORM_MAC) || (AX_TARGET_PLATFORM == AX_PLATFORM_WIN32)
+    auto* game = GameSession::create(data, 1, 3, 0, 1, false);
+    canvas->addChild(game);
+    auto log = std::make_shared<std::ofstream>(std::string(output) + "/checks.txt");
+    auto failures = std::make_shared<int>(0);
+    auto check = [log, failures](bool ok, const char* message) {
+        *log << (ok ? "PASS " : "FAIL ") << message << '\n';
+        log->flush();
+        if (!ok) ++*failures;
+    };
+    auto index = std::make_shared<int>(0);
+    const std::vector<Size> sizes = {{960,640}, {1440,640}, {640,800}};
+    auto next = std::make_shared<std::function<void()>>();
+    *next = [=, &data] {
+        auto* view = static_cast<RenderViewImpl*>(Director::getInstance()->getRenderView());
+        const auto size = sizes.at(*index);
+        view->setWindowed(static_cast<int>(size.width), static_cast<int>(size.height));
+        rb::updateViewport();
+        *log << "Window " << size.width << 'x' << size.height << '\n';
+        auto* result = ResultFeedback::create(true);
+        canvas->addChild(result, 10);
+        result->play();
+        scene->scheduleOnce([=](float) {
+            view->setWindowed(size.width == 1440 ? 960 : 1440, 640);
+            rb::updateViewport();
+            auto* bar = descendant<LayerColor>(result);
+            const auto bounds = rb::viewportBounds();
+            check(bar && std::abs(bar->getPositionX()-bounds.getMinX()) < .1f &&
+                  std::abs(bar->getContentSize().width-bounds.size.width) < .1f,
+                  "visible success band follows live resize");
+            view->setWindowed(static_cast<int>(size.width), static_cast<int>(size.height));
+            rb::updateViewport();
+        }, .2f, "overlay-live-resize");
+        scene->scheduleOnce([=, &data](float) {
+            auto* bar = descendant<LayerColor>(result);
+            const auto bounds = rb::viewportBounds();
+            check(bar && std::abs(bar->getPositionX()-bounds.getMinX()) < .1f &&
+                  std::abs(bar->getContentSize().width-bounds.size.width) < .1f,
+                  "success band covers viewport width");
+            Sprite* title = nullptr;
+            for (auto* child : result->getChildren())
+                if (auto* sprite = dynamic_cast<Sprite*>(child); sprite && !dynamic_cast<LayerColor*>(sprite))
+                {
+                    title = sprite;
+                    break;
+                }
+            check(title && title->getPosition() == Vec2(240,160) &&
+                  title->getScaleX() == 1 && title->getScaleY() == 1,
+                  "success title stays centered and undistorted");
+            utils::captureScreen([=, &data](bool ok, std::string_view) {
+                require(ok, "Success screenshot failed");
+                result->removeFromParent();
+                // Actual EP2-3 monologue from issue #3: characterView=0, text 2821.
+                auto* story = StoryDialog::create(data, 1, 101, 0, 1);
+                canvas->addChild(story, 10);
+                story->open();
+                scene->scheduleOnce([=](float) {
+                    auto* skin = descendant<EpisodeDialog>(story);
+                    auto* portrait = skin ? descendant<Sprite>(skin) : nullptr;
+                    check(portrait && !portrait->isVisible(), "monologue hides character portrait");
+                    auto* clip = dynamic_cast<ClippingRectangleNode*>(skin);
+                    check(clip && clip->getClippingRegion().equals(Rect(0,0,480,320)),
+                          "dialog clips off-canvas entrance and exit artwork");
+                    // The vertically sliding portrait uses the same off-canvas hiding convention.
+                    auto* upper = Episode5Dialog::create(0, 1, false);
+                    auto* upperPortrait = descendant<Sprite>(upper);
+                    check(upperPortrait && !upperPortrait->isVisible(), "upper portrait hidden without character");
+                    utils::captureScreen([=](bool ok, std::string_view) {
+                        require(ok, "Monologue screenshot failed");
+                        story->removeFromParent();
+                        auto* visible = PortraitDialog::create(1, 0, 1, true);
+                        canvas->addChild(visible, 10);
+                        visible->open([=] {
+                            auto* portrait = descendant<Sprite>(visible);
+                            check(portrait && portrait->isVisible() && portrait->getBoundingBox().getMinX() >= 0,
+                                  "character dialogue still shows full portrait");
+                            visible->close([=] {
+                                visible->removeFromParent();
+                                if (++*index < static_cast<int>(sizes.size()))
+                                    scene->scheduleOnce([next](float) { (*next)(); }, .1f, "overlay-next");
+                                else
+                                {
+                                    *next = {};
+                                    check(*failures == 0, "overlay viewport regression");
+                                    if (*failures) throw std::runtime_error("Overlay viewport regression failed");
+                                    Director::getInstance()->end();
+                                }
+                            });
+                        });
+                    }, std::string(output) + "/monologue-" + std::to_string(*index) + ".png");
+                }, 1.2f, "overlay-monologue");
+            }, std::string(output) + "/success-" + std::to_string(*index) + ".png");
+        }, .7f, "overlay-success");
+    };
+    scene->scheduleOnce([next](float) { (*next)(); }, .5f, "overlay-start");
+    return true;
+#else
+    return false;
+#endif
+}
 }
 bool runViewportProbe(Scene* scene, Node* canvas, const rb::GameData& data)
 {
+    if (runOverlayProbe(scene, canvas, data)) return true;
     const char* output = std::getenv("RB_VIEWPORT_PROBE");
     if (!output) return false;
 #if (AX_TARGET_PLATFORM == AX_PLATFORM_MAC) || (AX_TARGET_PLATFORM == AX_PLATFORM_WIN32)

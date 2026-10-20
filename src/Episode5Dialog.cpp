@@ -14,6 +14,7 @@ void Episode5Dialog::setup()
 {
     setContentSize({480, 320});
     portrait_ = rb::sprite("char_e5.png");
+    portrait_->setVisible(showCharacter_);
     addChild(portrait_);
     auto size = portrait_->getContentSize();
     portrait_->setPosition(295 + size.width / 2, 320 + size.height / 2);

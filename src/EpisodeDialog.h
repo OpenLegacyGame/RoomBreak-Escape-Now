@@ -8,7 +8,7 @@ class SheetSprite;
 // Shared flow of the original EventScene layers: a hero text box that slides
 // up from the bottom, an optional character box, and paged typewriter text.
 // Each episode skin supplies its artwork and the hooks below.
-class EpisodeDialog : public ax::Node
+class EpisodeDialog : public ax::ClippingRectangleNode
 {
 public:
     virtual void open(std::function<void()> complete)  = 0;

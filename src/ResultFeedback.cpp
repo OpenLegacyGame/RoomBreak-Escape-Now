@@ -1,4 +1,5 @@
 #include "ResultFeedback.h"
+#include "Viewport.h"
 #include "NodeFactory.h"
 #include "Assets.h"
 #include "SheetSprite.h"
@@ -11,7 +12,11 @@ ResultFeedback* ResultFeedback::create(bool success)
     {
         value->bar_ = LayerColor::create(Color4B(0, 0, 0, 0), 480, 30);
         value->addChild(value->bar_);
-        value->bar_->setPosition(0, 145);
+        rb::onViewport(value->bar_, [bar = value->bar_] {
+            const auto bounds = rb::viewportBounds();
+            bar->setPosition(bounds.getMinX(), 145);
+            bar->setContentSize({bounds.size.width, 30});
+        });
         value->title_ = rb::sprite("res_success.png");
         value->addChild(value->title_);
         value->title_->setPosition(240, 160);
