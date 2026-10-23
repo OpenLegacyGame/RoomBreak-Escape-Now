@@ -42,11 +42,11 @@ Telegram에서 게임과 프로젝트에 대해 함께 이야기해요.
 
 ### 망치 미니게임
 
-[망치 플레이 영상 보기](media/hammer.mp4)
+https://github.com/user-attachments/assets/c8457177-1462-467d-b2bb-4d7b08c3561a
 
 ### 자르기 미니게임
 
-[칼질 플레이 영상 보기](media/knife.mp4)
+https://github.com/user-attachments/assets/3e5eb6e6-18e0-41a6-bc0b-9f4c1416a9f3
 
 > 원작 《RoomBreak: Escape Now!!》의 명칭, 미술, 음악, 이야기 및 스테이지 콘텐츠의 권리는 GAMEDAY Inc.와 각 권리자에게 있습니다. 이 프로젝트는 원 개발사와 제휴 관계가 없는 독립적인 현대화 재구현입니다. MIT 라이선스는 새로 작성한 프로그램 코드에 적용되며, 원작 콘텐츠의 권리를 변경하지 않습니다.
 

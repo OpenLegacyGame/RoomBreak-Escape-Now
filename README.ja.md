@@ -42,11 +42,11 @@
 
 ### ハンマーのミニゲーム
 
-[ハンマーのプレイ動画を見る](media/hammer.mp4)
+https://github.com/user-attachments/assets/c8457177-1462-467d-b2bb-4d7b08c3561a
 
 ### 切断のミニゲーム
 
-[ナイフのプレイ動画を見る](media/knife.mp4)
+https://github.com/user-attachments/assets/3e5eb6e6-18e0-41a6-bc0b-9f4c1416a9f3
 
 > 原作『RoomBreak: Escape Now!!』の名称、画像、音楽、物語、ステージ内容の権利は GAMEDAY Inc. および各権利者に帰属します。本プロジェクトは独立した現代向けの再実装であり、原開発元との提携関係はありません。MIT ライセンスは新たに作成したプログラムコードに適用され、原作コンテンツの権利は変更しません。
 

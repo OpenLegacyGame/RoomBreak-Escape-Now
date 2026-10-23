@@ -42,11 +42,11 @@ We also fixed an original safe-dial issue: the old implementation truncated drag
 
 ### Hammer minigame
 
-[Watch the hammer clip](media/hammer.mp4)
+https://github.com/user-attachments/assets/c8457177-1462-467d-b2bb-4d7b08c3561a
 
 ### Cutting minigame
 
-[Watch the cutting clip](media/knife.mp4)
+https://github.com/user-attachments/assets/3e5eb6e6-18e0-41a6-bc0b-9f4c1416a9f3
 
 > The original RoomBreak: Escape Now!! name, artwork, music, story and level content belong to GAMEDAY Inc. and their respective rights holders. This is an independent modern reimplementation, unaffiliated with the original developer. The MIT license covers newly written program code and does not relicense original game content.
 

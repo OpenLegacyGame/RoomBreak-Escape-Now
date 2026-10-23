@@ -42,11 +42,11 @@
 
 ### 錘擊小遊戲
 
-[觀看錘擊片段](media/hammer.mp4)
+https://github.com/user-attachments/assets/c8457177-1462-467d-b2bb-4d7b08c3561a
 
 ### 切割小遊戲
 
-[觀看切割片段](media/knife.mp4)
+https://github.com/user-attachments/assets/3e5eb6e6-18e0-41a6-bc0b-9f4c1416a9f3
 
 > 原作《RoomBreak: Escape Now!!》及其名稱、美術、音樂、劇情和關卡內容的權利歸 GAMEDAY Inc. 及相應權利人所有。本專案是獨立的現代重新實作，與原開發商無隸屬關係。MIT 授權適用於新增程式碼，不改變原作內容的權利歸屬。
 
