@@ -112,3 +112,48 @@ build/tests/data-tests assets/GameData.json
 Saves and settings are stored in the platform's writable application-data directory. Keep the application identifiers stable for upgrades. Windows keeps the earlier `RoomBreakRebuilt` save directory so the renamed executable can load existing progress. The Windows uninstaller preserves user saves.
 
 For the included 30-stage route runner and continuous menu demo, see [the route usage guide (Chinese)](tests/README.md). It includes the separate `RB_VISUAL_PROBE=ON` build, commands, output files, and displayed-to-internal episode mapping.
+
+## Automated builds and releases
+
+Every branch push (without path filters) builds Windows amd64, macOS arm64,
+Android arm64-v8a and unsigned iOS arm64 packages. A push containing several
+commits builds the pushed branch tip. Manual workflow runs also build artifacts.
+The workflow uses standard `windows-2022`, `macos-15` and `ubuntu-24.04` runners;
+no larger runners are needed. Builds are not cancelled by later pushes.
+
+Each successful platform job uploads its installer for one day. After all four
+platforms succeed, the workflow uploads a combined artifact named
+`RoomBreak-vVERSION-COMMIT_SHA`, retained for seven days, containing exactly:
+
+- `RoomBreak-Windows-amd64.exe`
+- `RoomBreak-macOS-arm64.pkg`
+- `RoomBreak-Android-arm64-v8a.apk`
+- `RoomBreak-iOS-arm64-unsigned.ipa`
+- `INSTALL.txt`
+- `SHA256SUMS.txt`
+
+Artifacts are generated whether or not a release is published. GitHub additionally
+provides its usual source-code ZIP and tarball for each release.
+
+`VERSION` is the version source, initially `1.0.3`. Change it to a higher
+`MAJOR.MINOR.PATCH` and push to the default branch to publish automatically after
+all packages succeed. The build scripts stamp Apple, Android and Windows package
+metadata from this file. Android versionCode and Apple build number preserve the
+existing `1.0.3 -> 4` mapping and increase with subsequent versions. Python 3.11+
+is required by the CI packaging tools; the workflow installs Python 3.12.
+
+Release titles are `RoomBreak vVERSION`; release bodies contain the complete
+message (subject and body) of the pushed commit. Use that commit message for the
+release notes. Existing published releases and their assets are never edited or
+replaced, and versions at or below v1.0.3 are never created by this workflow.
+Non-default branches and manual runs only produce artifacts. A failed build can
+be retried; only a bot-owned unfinished draft for the exact same commit can be
+resumed, and existing uploaded files must match their SHA-256 digests.
+
+Android CI uses a fixed debug signing key from the repository secret
+`ANDROID_DEBUG_KEYSTORE_BASE64` (base64 of a keystore with the standard
+`androiddebugkey` alias and `android` store/key passwords). The original v1.0.3
+key was unavailable when CI was configured, so the new CI key cannot update the
+old APK in place. Preserve/export saves before removing the old installation;
+uninstalling normally removes app data. Subsequent CI APKs use the same new key.
+Keep an offline backup of the keystore; never commit it or expose it in logs.

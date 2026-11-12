@@ -11,6 +11,9 @@ Unicode true
 !ifndef OUTPUT_FILE
 !define OUTPUT_FILE "RoomBreak Escape Now Setup.exe"
 !endif
+!ifndef APP_VERSION
+!error "Set APP_VERSION from VERSION"
+!endif
 Name "RoomBreak Escape Now"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$PROGRAMFILES64\RoomBreak Escape Now"
@@ -52,7 +55,7 @@ Section "RoomBreak Escape Now"
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\RoomBreakRebuilt" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayName" "RoomBreak Escape Now"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayVersion" "1.0.3"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "InstallLocation" "$INSTDIR"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\RoomBreakRebuilt" "NoModify" 1

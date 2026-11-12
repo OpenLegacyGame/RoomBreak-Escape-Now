@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 project_dir=$(cd "$(dirname "$0")/.." && pwd)
+python3 "$project_dir/scripts/ci/version.py" --stamp
 export AX_ROOT=${AX_ROOT:-"$project_dir/external/axmol"}
 mode=${1:-simulator}
 case "$mode" in

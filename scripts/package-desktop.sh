@@ -3,6 +3,7 @@ set -euo pipefail
 # Usage: package-desktop.sh macos APP OUTPUT.pkg
 #        package-desktop.sh windows RELEASE_DIR VC_REDIST.exe OUTPUT.exe
 script_dir=$(cd "$(dirname "$0")" && pwd)
+version=$(python3 "$script_dir/ci/version.py")
 case "${1:-}" in
   macos)
     [[ $# == 3 ]] || exit 2
@@ -16,7 +17,7 @@ case "${1:-}" in
     codesign --verify --deep --strict "$stage/root/RoomBreak Escape Now.app"
     pkgbuild --analyze --root "$stage/root" "$stage/components.plist"
     /usr/libexec/PlistBuddy -c 'Set :0:BundleIsRelocatable false' "$stage/components.plist"
-    pkgbuild --root "$stage/root" --component-plist "$stage/components.plist" --identifier local.roombreak.rebuilt.installer --version 1.0.3 --install-location /Applications "$output"
+    pkgbuild --root "$stage/root" --component-plist "$stage/components.plist" --identifier local.roombreak.rebuilt.installer --version "$version" --install-location /Applications "$output"
     ;;
   windows)
     [[ $# == 4 ]] || exit 2
@@ -31,7 +32,7 @@ case "${1:-}" in
     mkdir "$stage/payload"
     cp -RL "$payload/." "$stage/payload/"
     payload="$stage/payload"
-    makensis -WX "-DPACKAGE_DIR=$payload" "-DVC_REDIST=$redist" "-DOUTPUT_FILE=$output" "$script_dir/windows-installer.nsi"
+    makensis -WX "-DAPP_VERSION=$version" "-DPACKAGE_DIR=$payload" "-DVC_REDIST=$redist" "-DOUTPUT_FILE=$output" "$script_dir/windows-installer.nsi"
     ;;
   *) echo 'Usage: package-desktop.sh macos APP OUTPUT.pkg | windows RELEASE_DIR VC_REDIST.exe OUTPUT.exe' >&2; exit 2 ;;
 esac

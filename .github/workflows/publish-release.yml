@@ -1,94 +1,230 @@
-name: Publish verified release
+name: Build packages and publish new versions
 
 on:
+  push:
+    branches: ['**']
   workflow_dispatch:
-    inputs:
-      phase:
-        description: Prepare a draft, or verify and publish uploaded packages
-        required: true
-        type: choice
-        options: [prepare, publish]
-      tag:
-        description: Release tag
-        required: true
-        default: v1.0.0
-      commit:
-        description: Full commit SHA used to build the packages
-        required: true
 
+# Build every branch push, including documentation-only changes. Do not cancel
+# older builds when another commit arrives. Publishing alone needs write access.
 permissions:
-  contents: write
+  contents: read
 
-concurrency:
-  group: release-${{ inputs.tag }}
-  cancel-in-progress: false
+env:
+  CMAKE_BUILD_PARALLEL_LEVEL: '3'
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      RELEASE_TAG: ${{ inputs.tag }}
-      SOURCE_COMMIT: ${{ inputs.commit }}
-      PHASE: ${{ inputs.phase }}
+  metadata:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Validate inputs
-        run: |
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
-          gh api "repos/$GH_REPO/commits/$SOURCE_COMMIT" --jq .sha | grep -Fx "$SOURCE_COMMIT"
-      - name: Prepare bot-owned draft
-        if: inputs.phase == 'prepare'
-        run: |
-          cat > notes.md <<'NOTES'
-          Native builds for Windows amd64, iOS arm64, Android arm64-v8a, and macOS Apple Silicon.
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate packaging and release rules
+        run: python -m unittest discover -s scripts/ci -p 'test_*.py' -v
+      - name: Read package version
+        id: version
+        run: echo "version=$(python scripts/ci/version.py)" >> "$GITHUB_OUTPUT"
 
-          Includes fixes for curtain number clues, item-name control characters, the Sphinx 1324 clue, and taps with small finger movements.
-
-          - Windows: EXE installer with the required VC++ runtime.
-          - iOS: unsigned IPA; sign it before installation.
-          - Android: APK signed with the Android Debug certificate.
-          - macOS: PKG containing an ad-hoc signed app; not notarized.
-
-          SHA256SUMS.txt contains package checksums. Installation instructions are included.
-          NOTES
-          gh release create "$RELEASE_TAG" --draft --target "$SOURCE_COMMIT" --title "RoomBreak $RELEASE_TAG" --notes-file notes.md
-      - name: Verify packages and publish as bot
-        if: inputs.phase == 'publish'
+  apple:
+    needs: metadata
+    name: Build ${{ matrix.platform }} arm64
+    runs-on: macos-15
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macOS, iOS]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install build tools
         run: |
-          gh release view "$RELEASE_TAG" --json isDraft,author,targetCommitish > release.json
-          python3 - <<'PY'
-          import json, os
-          r = json.load(open('release.json'))
-          assert r['isDraft'] and r['author']['login'] == 'github-actions[bot]'
-          assert r['targetCommitish'] == os.environ['SOURCE_COMMIT']
-          PY
-          mkdir packages
-          gh release download "$RELEASE_TAG" --dir packages
-          python3 - <<'PY'
-          from pathlib import Path
-          import hashlib
-          p = Path('packages')
-          names = {'RoomBreak-Windows-amd64.exe', 'RoomBreak-iOS-arm64-unsigned.ipa',
-                   'RoomBreak-Android-arm64-v8a.apk', 'RoomBreak-macOS-arm64.pkg'}
-          assert {x.name for x in p.iterdir()} == names | {'SHA256SUMS.txt', 'INSTALL.txt'}
-          seen = set()
-          for line in (p/'SHA256SUMS.txt').read_text().splitlines():
-              digest, name = line.split('  ', 1)
-              assert name in names and name not in seen
-              assert hashlib.sha256((p/name).read_bytes()).hexdigest() == digest
-              seen.add(name)
-          assert seen == names
-          PY
-          # Re-upload with the installation token so every final asset belongs to the bot.
-          gh release upload "$RELEASE_TAG" packages/* --clobber
-          gh api "repos/$GH_REPO/releases" > verified-releases.json
-          python3 - <<'PY'
-          import json, os
-          r = next(r for r in json.load(open('verified-releases.json')) if r['tag_name'] == os.environ['RELEASE_TAG'])
-          assert r['draft'] and r['author']['login'] == 'github-actions[bot]'
-          assert len(r['assets']) == 6
-          assert all(a['state'] == 'uploaded' and a['uploader']['login'] == 'github-actions[bot]' for a in r['assets'])
-          PY
-          gh release edit "$RELEASE_TAG" --draft=false --latest
+          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          brew list nasm >/dev/null 2>&1 || brew install nasm
+          command -v pwsh >/dev/null || brew install --cask powershell
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+      - name: Prepare pinned Axmol engine
+        run: bash scripts/prepare-engine.sh
+      - name: Build and package macOS
+        if: matrix.platform == 'macOS'
+        run: |
+          bash scripts/build-macos.sh
+          mkdir -p dist/packages
+          bash scripts/package-desktop.sh macos \
+            'build/macos-release/bin/RoomBreakEscapeNow/RoomBreak Escape Now.app' \
+            dist/packages/RoomBreak-macOS-arm64.pkg
+      - name: Build and package unsigned iOS
+        if: matrix.platform == 'iOS'
+        run: |
+          bash scripts/build-ios.sh device
+          mkdir -p dist/packages dist/ios/Payload
+          ditto 'build/ios-device/bin/RoomBreakEscapeNow/Release/RoomBreak Escape Now.app' \
+            'dist/ios/Payload/RoomBreak Escape Now.app'
+          cd dist/ios
+          ditto -c -k --keepParent Payload ../packages/RoomBreak-iOS-arm64-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.platform }}
+          path: dist/packages/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  windows:
+    needs: metadata
+    name: Build Windows amd64
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Install build tools
+        run: |
+          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          if ($LASTEXITCODE) { throw 'Build tool installation failed' }
+          choco install nasm nsis --no-progress -y
+          if ($LASTEXITCODE) { throw 'NSIS/NASM installation failed' }
+          "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Append
+          "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
+      - name: Prepare pinned Axmol engine
+        run: ./scripts/prepare-engine.ps1
+      - name: Build Windows
+        run: ./scripts/build-windows.ps1
+      - name: Package Windows with the Visual C++ runtime
+        run: |
+          New-Item -ItemType Directory -Force dist/packages | Out-Null
+          Invoke-WebRequest https://aka.ms/vs/17/release/vc_redist.x64.exe -OutFile dist/vc_redist.x64.exe
+          $signature = Get-AuthenticodeSignature dist/vc_redist.x64.exe
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+            throw 'The Visual C++ runtime signature is invalid'
+          }
+          $version = python scripts/ci/version.py
+          $payload = (Resolve-Path 'build/windows-release/bin/RoomBreakEscapeNow').Path
+          if (-not (Test-Path "$payload/RoomBreak Escape Now.exe")) { throw 'Missing game executable' }
+          if (Get-ChildItem $payload -Recurse -File | Where-Object { $_.Name -like 'roombreak-rebuilt-progress*' -or $_.Name -like 'UserDefault.*' }) {
+            throw 'Refusing to package user saves'
+          }
+          $redist = (Resolve-Path dist/vc_redist.x64.exe).Path
+          $output = Join-Path $pwd 'dist/packages/RoomBreak-Windows-amd64.exe'
+          makensis /WX "/DAPP_VERSION=$version" "/DPACKAGE_DIR=$payload" "/DVC_REDIST=$redist" "/DOUTPUT_FILE=$output" scripts/windows-installer.nsi
+          if ($LASTEXITCODE) { throw 'Windows packaging failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-Windows
+          path: dist/packages/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  android:
+    needs: metadata
+    name: Build Android arm64
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install build tools and Android SDK
+        run: |
+          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          sudo apt-get update
+          sudo apt-get install -y nasm
+          command -v pwsh
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;30.0.16248370'
+      - name: Prepare pinned Axmol engine
+        run: bash scripts/prepare-engine.sh
+      - name: Restore stable Android signing key
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$ANDROID_DEBUG_KEYSTORE_BASE64" || { echo 'Missing Android signing secret'; exit 1; }
+          install -d -m 700 "$HOME/.android"
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
+          chmod 600 "$HOME/.android/debug.keystore"
+      - name: Build and package Android
+        run: |
+          bash scripts/build-android.sh
+          mkdir -p dist/packages
+          cp 'dist/android/RoomBreak Escape Now.apk' dist/packages/RoomBreak-Android-arm64-v8a.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs dist/packages/RoomBreak-Android-arm64-v8a.apk
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$HOME/.android/debug.keystore"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-Android
+          path: dist/packages/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  bundle:
+    needs: [metadata, apple, windows, android]
+    name: Collect all six release files
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: dist/release
+      - name: Generate installation instructions and checksums
+        run: python scripts/ci/packages.py dist/release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RoomBreak-v${{ needs.metadata.outputs.version }}-${{ github.sha }}
+          path: dist/release/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  release:
+    needs: [metadata, bundle]
+    name: Publish only a new version
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: roombreak-publish
+      queue: max
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: RoomBreak-v${{ needs.metadata.outputs.version }}-${{ github.sha }}
+          path: dist/release
+      - name: Publish verified installers with the commit message
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: python scripts/ci/release.py

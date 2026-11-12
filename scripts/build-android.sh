@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 project_dir=$(cd "$(dirname "$0")/.." && pwd)
+python3 "$project_dir/scripts/ci/version.py" --stamp
 export AX_ROOT=${AX_ROOT:-"$project_dir/external/axmol"}
 [[ -d "$AX_ROOT/core" ]] || { echo 'Run scripts/prepare-engine.sh first, or set AX_ROOT.' >&2; exit 1; }
 : "${ANDROID_HOME:?Set ANDROID_HOME to an Android SDK with API 36, build-tools 36.0.0 and NDK 30.0.16248370}"
