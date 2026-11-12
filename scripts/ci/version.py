@@ -13,7 +13,7 @@ def parse_version(value):
 
 
 def read_version(root=ROOT):
-    value = (root / 'VERSION').read_text().strip()
+    value = (root / 'VERSION').read_text(encoding='utf-8').strip()
     parse_version(value)
     return value
 
@@ -29,10 +29,10 @@ def stamp(root=ROOT):
     code = version_code(version)
     def replace(path, pattern, replacement, count=1):
         path = root / path
-        text, found = re.subn(pattern, lambda _: replacement, path.read_text())
+        text, found = re.subn(pattern, lambda _: replacement, path.read_text(encoding='utf-8'))
         if found != count:
             raise ValueError(f'{path}: expected {count} version fields, found {found}')
-        path.write_text(text)
+        path.write_text(text, encoding='utf-8')
 
     for path in ['platforms/apple/mac/Info.plist',
                  'platforms/apple/ios/targets/ios/Info.plist',

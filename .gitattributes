@@ -7,3 +7,4 @@
 *.wav binary
 *.mp4 binary
 *.ttf binary
+*.patch text eol=lf

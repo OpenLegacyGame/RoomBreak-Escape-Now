@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $ProjectDirectory = (Resolve-Path "$PSScriptRoot/..").Path
 if (-not $EngineDirectory) { $EngineDirectory = "$ProjectDirectory/external/axmol" }
 if (-not (Test-Path "$EngineDirectory/.git")) {
-    git clone --depth 1 --branch v2.11.5 https://github.com/axmolengine/axmol.git $EngineDirectory
+    git -c core.autocrlf=false clone --depth 1 --branch v2.11.5 https://github.com/axmolengine/axmol.git $EngineDirectory
     if ($LASTEXITCODE) { throw 'Engine clone failed' }
 }
 $ExpectedRevision = '6c0dce6db4660feafe29dabb1ab3506ee76b0931'

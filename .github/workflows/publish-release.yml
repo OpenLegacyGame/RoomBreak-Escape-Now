@@ -150,6 +150,8 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - name: Install build tools and Android SDK
         run: |
           python -m pip install 'cmake==4.4.4' 'ninja==1.13.2'
