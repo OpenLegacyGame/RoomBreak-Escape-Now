@@ -19,8 +19,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Validate packaging and release rules
@@ -39,19 +39,21 @@ jobs:
       matrix:
         platform: [macOS, iOS]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Install build tools
         run: |
-          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          python -m pip install 'cmake==4.4.4' 'ninja==1.13.2'
           brew list nasm >/dev/null 2>&1 || brew install nasm
           command -v pwsh >/dev/null || brew install --cask powershell
           test "$(uname -m)" = arm64
           xcodebuild -version
       - name: Prepare pinned Axmol engine
         run: bash scripts/prepare-engine.sh
+      - name: Install pinned shader compiler
+        run: python scripts/ci/setup_axslcc.py
       - name: Build and package macOS
         if: matrix.platform == 'macOS'
         run: |
@@ -86,8 +88,8 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - uses: ilammy/msvc-dev-cmd@v1
@@ -95,7 +97,7 @@ jobs:
           arch: x64
       - name: Install build tools
         run: |
-          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          python -m pip install 'cmake==4.4.4' 'ninja==1.13.2'
           if ($LASTEXITCODE) { throw 'Build tool installation failed' }
           choco install nasm nsis --no-progress -y
           if ($LASTEXITCODE) { throw 'NSIS/NASM installation failed' }
@@ -103,6 +105,8 @@ jobs:
           "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Append
       - name: Prepare pinned Axmol engine
         run: ./scripts/prepare-engine.ps1
+      - name: Install pinned shader compiler
+        run: python scripts/ci/setup_axslcc.py
       - name: Build Windows
         run: ./scripts/build-windows.ps1
       - name: Package Windows with the Visual C++ runtime
@@ -137,23 +141,26 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
+      - uses: android-actions/setup-android@v3
       - name: Install build tools and Android SDK
         run: |
-          python -m pip install 'cmake>=4.2,<5' 'ninja>=1.13,<2'
+          python -m pip install 'cmake==4.4.4' 'ninja==1.13.2'
           sudo apt-get update
           sudo apt-get install -y nasm
           command -v pwsh
           sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;30.0.16248370'
       - name: Prepare pinned Axmol engine
         run: bash scripts/prepare-engine.sh
+      - name: Install pinned shader compiler
+        run: python scripts/ci/setup_axslcc.py
       - name: Restore stable Android signing key
         env:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
@@ -184,8 +191,8 @@ jobs:
     name: Collect all six release files
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
@@ -215,8 +222,8 @@ jobs:
       queue: max
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - uses: actions/download-artifact@v4
