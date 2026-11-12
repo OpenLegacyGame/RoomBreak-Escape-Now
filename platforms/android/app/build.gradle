@@ -55,6 +55,18 @@ android {
     }
 
     signingConfigs {
+        debug {
+            // CI must use the repository's stable key, regardless of the
+            // runner's Android user-home configuration.
+            def ciKeystore = System.getenv('RB_ANDROID_KEYSTORE')
+            if (ciKeystore) {
+                storeFile file(ciKeystore)
+                storeType 'PKCS12'
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
        release {
             if (project.hasProperty("KEY_STORE_FILE")) {
                 storeFile file(KEY_STORE_FILE)

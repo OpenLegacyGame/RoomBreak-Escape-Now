@@ -138,6 +138,8 @@ jobs:
   android:
     needs: metadata
     name: Build Android arm64
+    env:
+      RB_ANDROID_KEYSTORE: ${{ github.workspace }}/../roombreak-ci.keystore
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
@@ -168,18 +170,32 @@ jobs:
           ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
         run: |
           test -n "$ANDROID_DEBUG_KEYSTORE_BASE64" || { echo 'Missing Android signing secret'; exit 1; }
-          install -d -m 700 "$HOME/.android"
-          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
-          chmod 600 "$HOME/.android/debug.keystore"
+          umask 077
+          printf '%s' "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$RB_ANDROID_KEYSTORE"
+          chmod 600 "$RB_ANDROID_KEYSTORE"
+          keytool -exportcert -alias androiddebugkey -keystore "$RB_ANDROID_KEYSTORE" \
+            -storetype PKCS12 -storepass android -file "$RUNNER_TEMP/roombreak-signing.der"
+          python - "$RUNNER_TEMP/roombreak-signing.der" <<'PY'
+          import hashlib, pathlib, sys
+          actual = hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest()
+          expected = pathlib.Path('scripts/ci/android-signing-certificate.sha256').read_text().strip()
+          if actual != expected:
+              raise SystemExit('The Android secret does not match the configured certificate')
+          print('Android keystore certificate matches the pinned fingerprint')
+          PY
       - name: Build and package Android
         run: |
           bash scripts/build-android.sh
           mkdir -p dist/packages
           cp 'dist/android/RoomBreak Escape Now.apk' dist/packages/RoomBreak-Android-arm64-v8a.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs dist/packages/RoomBreak-Android-arm64-v8a.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs \
+            dist/packages/RoomBreak-Android-arm64-v8a.apk > "$RUNNER_TEMP/apk-signature.txt"
+          cat "$RUNNER_TEMP/apk-signature.txt"
+          expected=$(cat scripts/ci/android-signing-certificate.sha256)
+          grep -Fx "Signer #1 certificate SHA-256 digest: $expected" "$RUNNER_TEMP/apk-signature.txt"
       - name: Remove signing key
         if: always()
-        run: rm -f "$HOME/.android/debug.keystore"
+        run: rm -f "$RB_ANDROID_KEYSTORE" "$RUNNER_TEMP/roombreak-signing.der"
       - uses: actions/upload-artifact@v4
         with:
           name: package-Android

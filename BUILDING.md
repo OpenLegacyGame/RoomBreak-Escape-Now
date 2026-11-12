@@ -151,8 +151,12 @@ be retried; only a bot-owned unfinished draft for the exact same commit can be
 resumed, and existing uploaded files must match their SHA-256 digests.
 
 Android CI uses a fixed debug signing key from the repository secret
-`ANDROID_DEBUG_KEYSTORE_BASE64` (base64 of a keystore with the standard
-`androiddebugkey` alias and `android` store/key passwords). The original v1.0.3
+`ANDROID_DEBUG_KEYSTORE_BASE64` (base64 of a PKCS12 keystore with the standard
+`androiddebugkey` alias and `android` store/key passwords). CI explicitly selects
+this keystore and verifies both its certificate and the APK signature against
+`scripts/ci/android-signing-certificate.sha256` before uploading. When intentionally
+rotating the key, update both the secret and this public certificate fingerprint.
+The original v1.0.3
 key was unavailable when CI was configured, so the new CI key cannot update the
 old APK in place. Preserve/export saves before removing the old installation;
 uninstalling normally removes app data. Subsequent CI APKs use the same new key.
